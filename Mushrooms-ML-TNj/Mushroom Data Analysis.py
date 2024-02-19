@@ -7,7 +7,7 @@ from sklearn.preprocessing import normalize
 from sklearn.preprocessing import OneHotEncoder
 import matplotlib.pyplot as plt
 import matplotlib.image as im
-# import seaborn
+import seaborn as sns
 from sklearn import tree
 
 
@@ -15,6 +15,9 @@ from sklearn import tree
 # DataHeaders = ['classification','cap-shape','cap-surface','cap-color','bruises?','odor','gill-attachment','gill-spacing','gill-size','gill-color','stalk-shape','stalk-root','stalk-surface-above-ring',
 #  'stalk-surface-below-ring','stalk-color-above-ring','stalk-color-below-ring','veil-type','veil-color','ring-number','ring-type','spore-print-color','population','habitat']
 rawDataFilePath= os.getcwd() + "\\mushroom\\agaricus-lepiota.csv"
+
+
+Data, Target, FeatureMap, FeatureCounts, FeatureRawValues = 0, 0, 0, 0, 0
 
 def FeatureSeparation(rawDataFilePath, printToCSV=False):
 # Adjust file path, can remove getcwd if easier and just put file path in parenthesis. *Must convert to .csv first*
@@ -96,9 +99,10 @@ def ShowGraphs():
 
 from sklearn import metrics as metrics
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn import metrics
+
 
 
 def RFRunner(rawData, filePath=None):
@@ -106,17 +110,15 @@ def RFRunner(rawData, filePath=None):
         rawData = read_csv(filepath_or_buffer=filePath, dtype=int, na_filter=False, index_col=0)
     X = rawData[rawData.columns[:len(rawData.columns)-1]]
     y = rawData.get(rawData.columns[len(rawData.columns)-1])
-    print(y.shape)
-    RandomForestClassifier().get_params()
+
+    print(RandomForestRegressor().get_params())
 
     n_estimators_list = list(range(10,len(X.columns),20))
     criterion_list = ['gini', 'entropy']
-    max_depth_list = [2, 3, 4, 5, 7, 9]
-    temp = list(range(10,int(len(X.columns)),5))
-    max_depth_list.append(temp)
+    max_depth_list = [2, 3, 4, 5]
     min_samples_split_list = [x/1000 for x in list(range(5, len(X.columns)%10+1, 10))]
     min_samples_leaf_list = [x/1000 for x in list(range(5, len(X.columns)%10+1, 10))]
-    max_features_list = ['sqrt', 'log2']
+    max_features_list = ['log2']
 
     params_grid = {
         'n_estimators': n_estimators_list,
@@ -131,8 +133,6 @@ def RFRunner(rawData, filePath=None):
     for k in params_grid.keys(): num_combinations *= len(params_grid[k])
 
     print('Number of combinations = ', num_combinations)
-    params_grid
-    print("IGNORE FOLLOWING ERRORS (NO IMPACT ON PROGRAM), OR FIND CAUSE (RELATED TO ShowGraphs())")
 
     def my_roc_auc_score(model, X, y): return metrics.roc_auc_score(y, model.predict(X))
     model_rf = GridSearchCV(estimator=RandomForestClassifier(class_weight='balanced'),
@@ -141,26 +141,22 @@ def RFRunner(rawData, filePath=None):
                             cv=3,
                             scoring=my_roc_auc_score,
                             return_train_score=True,)
-    # model_rf = RandomizedSearchCV(estimator=RandomForestClassifier(class_weight='balanced'),
-    #                               param_distributions=params_grid,
-    #                               n_iter=50,
-    #                               cv=3,
-    #                               scoring=my_roc_auc_score,
-    #                               return_train_score=True,
-    #                               verbose=2)
+
 
     model_rf.fit(X,y)
 
-    print(model_rf.best_params_)
+    
 
     df_cv_results = pandas.DataFrame(model_rf.cv_results_)
     df_cv_results = df_cv_results[['rank_test_score','mean_test_score','mean_train_score',
                             'param_n_estimators', 'param_min_samples_split','param_min_samples_leaf',
                             'param_max_features', 'param_max_depth','param_criterion']]
     df_cv_results.sort_values('rank_test_score', inplace=True)
-    print(df_cv_results['mean_test_score'])
+    
 
     print(df_cv_results[:20])
+    print("Best Parameters:\n",model_rf.best_params_)
+    return model_rf.best_estimator_, model_rf
    
 
 
@@ -177,7 +173,18 @@ def RFRunner(rawData, filePath=None):
 featureSelectedDataFilePath = os.getcwd() + "\\mushroom\\FeatureSelectedData.csv"
 rawData = read_csv(filepath_or_buffer=featureSelectedDataFilePath, dtype=int, na_filter=False, index_col=0)
 
-RFRunner(rawData=rawData)
+topResult, clf = RFRunner(rawData=rawData)
+print(topResult)
+
+
+
+
+
+
+
+
+
+
 
 
 
